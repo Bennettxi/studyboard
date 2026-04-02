@@ -20,11 +20,12 @@ export default function AssignmentForm({
   onCancel,
   defaultStatus = "todo",
 }: AssignmentFormProps) {
-  const { courses, addAssignment, updateAssignment } = useApp();
+  const { courses, folders, addAssignment, updateAssignment } = useApp();
 
   const [title, setTitle] = useState(assignment?.title ?? "");
   const [description, setDescription] = useState(assignment?.description ?? "");
   const [courseId, setCourseId] = useState(assignment?.courseId ?? courses[0]?.id ?? "");
+  const [folderId, setFolderId] = useState(assignment?.folderId ?? "");
   const [dueDate, setDueDate] = useState(assignment?.dueDate ?? new Date().toISOString().split("T")[0]);
   const [priority, setPriority] = useState<Priority>(assignment?.priority ?? "medium");
   const [status, setStatus] = useState<AssignmentStatus>(assignment?.status ?? defaultStatus);
@@ -38,6 +39,7 @@ export default function AssignmentForm({
       title: title.trim(),
       description: description.trim() || undefined,
       courseId,
+      folderId: folderId || undefined,
       dueDate,
       priority,
       status,
@@ -99,6 +101,18 @@ export default function AssignmentForm({
           onChange={(e) => setCourseId(e.target.value)}
           options={courses.map((c) => ({ value: c.id, label: c.name }))}
         />
+        <Select
+          label="Folder"
+          id="folderId"
+          value={folderId}
+          onChange={(e) => setFolderId(e.target.value)}
+          options={[
+            { value: "", label: "No folder" },
+            ...folders.map((f) => ({ value: f.id, label: f.name })),
+          ]}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
         <Input
           label="Due Date"
           id="dueDate"
@@ -107,8 +121,6 @@ export default function AssignmentForm({
           onChange={(e) => setDueDate(e.target.value)}
           required
         />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
         <Select
           label="Priority"
           id="priority"
@@ -121,18 +133,18 @@ export default function AssignmentForm({
             { value: "urgent", label: "Urgent" },
           ]}
         />
-        <Select
-          label="Status"
-          id="status"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as AssignmentStatus)}
-          options={[
-            { value: "todo", label: "To Do" },
-            { value: "in_progress", label: "In Progress" },
-            { value: "done", label: "Done" },
-          ]}
-        />
       </div>
+      <Select
+        label="Status"
+        id="status"
+        value={status}
+        onChange={(e) => setStatus(e.target.value as AssignmentStatus)}
+        options={[
+          { value: "todo", label: "To Do" },
+          { value: "in_progress", label: "In Progress" },
+          { value: "done", label: "Done" },
+        ]}
+      />
       <Input
         label="Tags (comma separated)"
         id="tags"

@@ -1,14 +1,16 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import type { Assignment, Course, PomodoroSession } from "@/types";
+import type { Assignment, Course, PomodoroSession, Folder, ThemeName } from "@/types";
 import { generateId } from "@/lib/utils";
 
 interface AppState {
   courses: Course[];
   assignments: Assignment[];
   pomodoroSessions: PomodoroSession[];
+  folders: Folder[];
   darkMode: boolean;
+  theme: ThemeName;
 }
 
 interface AppContextType extends AppState {
@@ -21,25 +23,41 @@ interface AppContextType extends AppState {
   addAssignment: (assignment: Omit<Assignment, "id" | "createdAt" | "updatedAt">) => void;
   updateAssignment: (id: string, updates: Partial<Assignment>) => void;
   deleteAssignment: (id: string) => void;
+  // Folders
+  addFolder: (folder: Omit<Folder, "id">) => void;
+  updateFolder: (id: string, updates: Partial<Folder>) => void;
+  deleteFolder: (id: string) => void;
+  getFolder: (id: string) => Folder | undefined;
   // Pomodoro
   addPomodoroSession: (session: PomodoroSession) => void;
   // Theme
   toggleDarkMode: () => void;
+  setTheme: (theme: ThemeName) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
 
 const STORAGE_KEY = "studyboard-data";
 
+const defaultState: AppState = {
+  courses: [],
+  assignments: [],
+  pomodoroSessions: [],
+  folders: [],
+  darkMode: false,
+  theme: "default",
+};
+
 function loadState(): AppState {
-  if (typeof window === "undefined") {
-    return { courses: [], assignments: [], pomodoroSessions: [], darkMode: false };
-  }
+  if (typeof window === "undefined") return defaultState;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...defaultState, ...parsed };
+    }
   } catch {}
-  return { courses: [], assignments: [], pomodoroSessions: [], darkMode: false };
+  return defaultState;
 }
 
 function saveState(state: AppState) {
@@ -48,8 +66,26 @@ function saveState(state: AppState) {
   } catch {}
 }
 
+function applyThemeToDOM(theme: ThemeName, darkMode: boolean) {
+  const el = document.documentElement;
+  // Remove all theme classes
+  el.classList.remove("dark", "theme-ocean", "theme-forest", "theme-sunset", "theme-rose", "theme-lavender", "theme-midnight");
+
+  if (theme === "midnight") {
+    // Midnight is always dark-feeling, no need for .dark
+    el.classList.add("theme-midnight");
+  } else {
+    if (theme !== "default") {
+      el.classList.add(`theme-${theme}`);
+    }
+    if (darkMode) {
+      el.classList.add("dark");
+    }
+  }
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AppState>({ courses: [], assignments: [], pomodoroSessions: [], darkMode: false });
+  const [state, setState] = useState<AppState>(defaultState);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -60,11 +96,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loaded) {
       saveState(state);
-      if (state.darkMode) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+      applyThemeToDOM(state.theme, state.darkMode);
     }
   }, [state, loaded]);
 
@@ -125,6 +157,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  // Folders
+  const addFolder = useCallback((folder: Omit<Folder, "id">) => {
+    setState((prev) => ({
+      ...prev,
+      folders: [...prev.folders, { ...folder, id: generateId() }],
+    }));
+  }, []);
+
+  const updateFolder = useCallback((id: string, updates: Partial<Folder>) => {
+    setState((prev) => ({
+      ...prev,
+      folders: prev.folders.map((f) => (f.id === id ? { ...f, ...updates } : f)),
+    }));
+  }, []);
+
+  const deleteFolder = useCallback((id: string) => {
+    setState((prev) => ({
+      ...prev,
+      folders: prev.folders.filter((f) => f.id !== id),
+      assignments: prev.assignments.map((a) =>
+        a.folderId === id ? { ...a, folderId: undefined } : a
+      ),
+    }));
+  }, []);
+
+  const getFolder = useCallback(
+    (id: string) => state.folders.find((f) => f.id === id),
+    [state.folders]
+  );
+
   const addPomodoroSession = useCallback((session: PomodoroSession) => {
     setState((prev) => ({
       ...prev,
@@ -134,6 +196,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const toggleDarkMode = useCallback(() => {
     setState((prev) => ({ ...prev, darkMode: !prev.darkMode }));
+  }, []);
+
+  const setTheme = useCallback((theme: ThemeName) => {
+    setState((prev) => ({ ...prev, theme }));
   }, []);
 
   if (!loaded) return null;
@@ -149,8 +215,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addAssignment,
         updateAssignment,
         deleteAssignment,
+        addFolder,
+        updateFolder,
+        deleteFolder,
+        getFolder,
         addPomodoroSession,
         toggleDarkMode,
+        setTheme,
       }}
     >
       {children}

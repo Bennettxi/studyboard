@@ -15,7 +15,7 @@ import AssignmentForm from "@/components/assignments/AssignmentForm";
 const COLUMNS: AssignmentStatus[] = ["todo", "in_progress", "done"];
 
 export default function AssignmentsPage() {
-  const { assignments, courses, updateAssignment, deleteAssignment } = useApp();
+  const { assignments, courses, folders, updateAssignment, deleteAssignment } = useApp();
   const [showForm, setShowForm] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | undefined>();
   const [defaultStatus, setDefaultStatus] = useState<AssignmentStatus>("todo");
@@ -46,6 +46,7 @@ export default function AssignmentsPage() {
   }, [filteredAssignments]);
 
   const getCourse = (id: string) => courses.find((c) => c.id === id);
+  const getFolder = (id?: string) => id ? folders.find((f) => f.id === id) : undefined;
 
   const openAdd = (status: AssignmentStatus = "todo") => {
     setEditingAssignment(undefined);
@@ -142,7 +143,7 @@ export default function AssignmentsPage() {
                     draggable
                     onDragStart={() => setDraggedId(assignment.id)}
                     onDragEnd={() => setDraggedId(null)}
-                    className="bg-surface border border-border rounded-lg p-3 cursor-grab active:cursor-grabbing hover:shadow-sm transition-shadow animate-scale-in"
+                    className="glass-card p-3 cursor-grab active:cursor-grabbing animate-scale-in"
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <h3 className="font-medium text-sm leading-snug">{assignment.title}</h3>
@@ -161,6 +162,13 @@ export default function AssignmentsPage() {
                           style={{ backgroundColor: course.color }}
                         />
                         <span className="text-xs text-muted">{course.name}</span>
+                        {(() => { const folder = getFolder(assignment.folderId); return folder ? (
+                          <>
+                            <span className="text-xs text-muted">·</span>
+                            <div className="w-2 h-2 rounded" style={{ backgroundColor: folder.color }} />
+                            <span className="text-xs text-muted">{folder.name}</span>
+                          </>
+                        ) : null; })()}
                       </div>
                     )}
 
