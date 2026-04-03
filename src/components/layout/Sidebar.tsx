@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/context/AppContext";
+import { useAuth } from "@/context/AuthContext";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "squares-2x2" },
@@ -73,8 +74,18 @@ function NavIcon({ icon }: { icon: string }) {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { darkMode, toggleDarkMode, theme } = useApp();
+  const router = useRouter();
+  const { darkMode, toggleDarkMode, theme, isCloudSync } = useApp();
+  const { user, signOut } = useAuth();
   const isMidnight = theme === "midnight";
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/login");
+  };
+
+  const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "User";
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <aside className="w-64 bg-surface border-r border-border flex flex-col h-full shrink-0">
@@ -115,8 +126,45 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Bottom actions */}
-      <div className="p-3 border-t border-border space-y-0.5">
+      {/* Bottom section */}
+      <div className="p-3 border-t border-border space-y-1">
+        {/* User profile */}
+        {user ? (
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface-hover/50 mb-1">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+              <span className="text-xs font-bold text-white">{initials}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{displayName}</p>
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-success" />
+                <p className="text-[10px] text-muted">Cloud sync</p>
+              </div>
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="text-muted hover:text-foreground cursor-pointer shrink-0"
+              title="Sign out"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <Link
+            href="/login"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary hover:bg-surface-hover transition-all duration-150 mb-1"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+            </svg>
+            Sign In
+            <span className="text-[10px] text-muted ml-auto">local only</span>
+          </Link>
+        )}
+
+        {/* Settings */}
         <Link
           href="/settings"
           className={cn(
@@ -129,6 +177,8 @@ export default function Sidebar() {
           <NavIcon icon="settings" />
           Settings
         </Link>
+
+        {/* Dark mode toggle */}
         {!isMidnight && (
           <button
             onClick={toggleDarkMode}
